@@ -3,6 +3,19 @@ import type { Lead } from '@/types';
 
 const USER_ID = DEMO_USER_ID;
 
+function toFitScoreLabel(
+  score: number | string
+): 'high' | 'medium' | 'low' {
+  if (typeof score === 'string') {
+    if (['high', 'medium', 'low'].includes(score))
+      return score as 'high' | 'medium' | 'low';
+    score = parseInt(score);
+  }
+  if (score >= 8) return 'high';
+  if (score >= 5) return 'medium';
+  return 'low';
+}
+
 export const api = {
   leads: {
     list: async (): Promise<Lead[]> => {
@@ -26,6 +39,7 @@ export const api = {
         },
         body: JSON.stringify({
           ...lead,
+          fit_score: toFitScoreLabel(lead.fit_score),
           user_id: USER_ID
         }),
       });

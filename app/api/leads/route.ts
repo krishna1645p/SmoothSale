@@ -75,6 +75,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const safeFitScore = (() => {
+      const s = fit_score;
+      if (s === "high" || s === "medium" || s === "low") return s;
+      const n = typeof s === "string" ? parseInt(s) : Number(s);
+      if (n >= 8) return "high";
+      if (n >= 5) return "medium";
+      return "low";
+    })();
+
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from("leads")
@@ -84,7 +93,7 @@ export async function POST(req: NextRequest) {
         company,
         title: title || null,
         stage: stage || "lead",
-        fit_score: fit_score || "medium",
+        fit_score: safeFitScore,
         outreach_mode: outreach_mode || null,
         linkedin_url: linkedin_url || null,
         email: email || null,
@@ -129,6 +138,17 @@ export async function PATCH(req: NextRequest) {
         { error: "id and user_id are required" },
         { status: 400 }
       );
+    }
+
+    if (updates.fit_score !== undefined) {
+      const s = updates.fit_score;
+      updates.fit_score = (() => {
+        if (s === "high" || s === "medium" || s === "low") return s;
+        const n = typeof s === "string" ? parseInt(s) : Number(s);
+        if (n >= 8) return "high";
+        if (n >= 5) return "medium";
+        return "low";
+      })();
     }
 
     const supabase = createServerClient();
