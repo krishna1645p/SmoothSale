@@ -32,3 +32,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code (personal config; hook script .claude/hooks/ is committed)
+.claude/settings.local.json
