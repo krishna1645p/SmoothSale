@@ -36,7 +36,7 @@ AI-powered sales copilot. Next.js 14 App Router + Tailwind + Supabase + Zustand 
 
 ## Architecture notes
 
-- **Single user_id**: hardcoded `DEMO_USER_ID = 'demo-user-001'` in [lib/constants.ts](lib/constants.ts) and used inside [lib/api.ts](lib/api.ts) wrapper. No auth yet.
+- **Single user_id**: hardcoded `DEMO_USER_ID = '00000000-0000-0000-0000-000000000001'` in [lib/constants.ts](lib/constants.ts) and used inside [lib/api.ts](lib/api.ts) wrapper. No auth yet.
 - **API wrapper layer**: All page/component code calls `api.*` from [lib/api.ts](lib/api.ts) — never `fetch()` directly. The wrapper unwraps response shapes (`{ leads }` → `Lead[]`, `{ lead }` → `Lead`, etc.) so callers get clean entities.
 - **Zustand store**: [lib/store.ts](lib/store.ts) holds pipeline leads. Server-of-truth is Supabase; Zustand is a client cache populated on page load and mutated optimistically on writes.
 - **AI provider**: Google Gemini via `@google/generative-ai`. Wrapper in [lib/gemini.ts](lib/gemini.ts). Used by [lib/email-generator.ts](lib/email-generator.ts) and [app/api/transcripts/route.ts](app/api/transcripts/route.ts).

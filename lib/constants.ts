@@ -1,6 +1,6 @@
 import { Stage } from "@/types";
 
-export const DEMO_USER_ID = 'demo-user-001';
+export const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export const STAGES: Stage[] = [
   { id: "lead", title: "Lead", color: "#E5E7EB" },

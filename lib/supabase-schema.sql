@@ -127,28 +127,28 @@ create policy "Users can CRUD own emails" on public.generated_emails
 -- Demo mode policies (no auth required)
 create policy "Demo user can CRUD leads"
   on public.leads for all
-  using (user_id = 'demo-user-001')
-  with check (user_id = 'demo-user-001');
+  using (user_id = '00000000-0000-0000-0000-000000000001')
+  with check (user_id = '00000000-0000-0000-0000-000000000001');
 
 create policy "Demo user can CRUD icps"
   on public.icps for all
-  using (user_id = 'demo-user-001')
-  with check (user_id = 'demo-user-001');
+  using (user_id = '00000000-0000-0000-0000-000000000001')
+  with check (user_id = '00000000-0000-0000-0000-000000000001');
 
 create policy "Demo user can CRUD activities"
   on public.activities for all
-  using (user_id = 'demo-user-001')
-  with check (user_id = 'demo-user-001');
+  using (user_id = '00000000-0000-0000-0000-000000000001')
+  with check (user_id = '00000000-0000-0000-0000-000000000001');
 
 create policy "Demo user can CRUD transcripts"
   on public.transcripts for all
-  using (user_id = 'demo-user-001')
-  with check (user_id = 'demo-user-001');
+  using (user_id = '00000000-0000-0000-0000-000000000001')
+  with check (user_id = '00000000-0000-0000-0000-000000000001');
 
 create policy "Demo user can CRUD emails"
   on public.generated_emails for all
-  using (user_id = 'demo-user-001')
-  with check (user_id = 'demo-user-001');
+  using (user_id = '00000000-0000-0000-0000-000000000001')
+  with check (user_id = '00000000-0000-0000-0000-000000000001');
 
 create index idx_leads_user_id on public.leads(user_id);
 create index idx_leads_stage on public.leads(stage);
