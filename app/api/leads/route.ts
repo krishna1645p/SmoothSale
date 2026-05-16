@@ -146,7 +146,9 @@ export async function PATCH(req: NextRequest) {
       const s = updates.fit_score;
       updates.fit_score = (() => {
         if (s === "high" || s === "medium" || s === "low") return s;
+        if (s == null) return "medium";
         const n = typeof s === "string" ? parseInt(s) : Number(s);
+        if (isNaN(n)) return "medium";
         if (n >= 8) return "high";
         if (n >= 5) return "medium";
         return "low";
