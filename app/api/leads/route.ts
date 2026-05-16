@@ -7,6 +7,17 @@ function errMessage(e: unknown): string {
 
 // GET /api/leads?user_id=xxx
 export async function GET(req: NextRequest) {
+  console.log("LEADS API HIT");
+  console.log(
+    "SUPABASE_URL:",
+    process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING"
+  );
+  console.log(
+    "SERVICE_KEY:",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ? "SET" : "MISSING"
+  );
+  console.log("user_id param:", req.nextUrl.searchParams.get("user_id"));
+
   const userId = req.nextUrl.searchParams.get("user_id");
   if (!userId) {
     return NextResponse.json({ error: "user_id required" }, { status: 400 });
@@ -14,11 +25,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = createServerClient();
+    console.log("About to query Supabase");
     const { data, error } = await supabase
       .from("leads")
       .select("*")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
+    console.log("Query result - error:", JSON.stringify(error));
+    console.log("Query result - data count:", data?.length ?? "null");
 
     if (error) {
       console.error("Supabase leads GET error:", error);
