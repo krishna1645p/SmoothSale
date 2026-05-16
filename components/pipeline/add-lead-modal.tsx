@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { X } from "@phosphor-icons/react";
-import { DealStage, Lead, OutreachMode } from "@/types";
+import { DealStage, OutreachMode } from "@/types";
 import { usePipelineStore } from "@/lib/store";
 import { STAGES } from "@/lib/constants";
+import { api } from "@/lib/api";
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -19,35 +20,55 @@ export function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [stage, setStage] = useState<DealStage>("lead");
   const [outreachMode, setOutreachMode] = useState<OutreachMode>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = () => {
-    if (!name || !company) return;
-
-    const newLead: Lead = {
-      id: crypto.randomUUID(),
-      name,
-      company,
-      title: title || "New Lead",
-      stage,
-      fit_score: "medium",
-      outreach_mode: outreachMode,
-      linkedin_url: linkedinUrl || undefined,
-      last_activity: "Just now",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: "",
-    };
-
-    addLead(newLead);
+  const resetForm = () => {
     setName("");
     setCompany("");
     setTitle("");
     setLinkedinUrl("");
     setStage("lead");
     setOutreachMode(null);
+    setError(null);
+  };
+
+  const handleClose = () => {
+    if (saving) return;
+    resetForm();
     onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!name || !company) {
+      setError("Name and company are required");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await api.leads.create({
+        name,
+        company,
+        title: title || "New Lead",
+        stage,
+        fit_score: "medium",
+        outreach_mode: outreachMode,
+        linkedin_url: linkedinUrl || undefined,
+        user_id: "",
+        last_activity: "Just now",
+        updated_at: new Date().toISOString(),
+      });
+      addLead(created);
+      resetForm();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create lead");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -58,8 +79,9 @@ export function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
             Add New Lead
           </h3>
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 disabled:opacity-40"
+            disabled={saving}
           >
             <X size={20} weight="light" />
           </button>
@@ -146,11 +168,13 @@ export function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
               <option value="linkedin_message">LinkedIn Message</option>
             </select>
           </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             onClick={handleSubmit}
-            className="w-full px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
+            disabled={saving}
+            className="w-full px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
-            Add Lead
+            {saving ? "Saving..." : "Add Lead"}
           </button>
         </div>
       </div>

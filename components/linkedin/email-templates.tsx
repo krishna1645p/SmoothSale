@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Plus, PencilSimple } from "@phosphor-icons/react";
+import { Copy, Plus, PencilSimple, Check } from "@phosphor-icons/react";
 import { EmailTemplate } from "@/types";
 
 interface EmailTemplatesProps {
   coldEmail: EmailTemplate;
   coffeeChat: EmailTemplate;
   onAddToPipeline: () => void;
+  addState?: "idle" | "saving" | "added";
 }
 
 export function EmailTemplates({
   coldEmail,
   coffeeChat,
   onAddToPipeline,
+  addState = "idle",
 }: EmailTemplatesProps) {
   const [activeTab, setActiveTab] = useState<"cold" | "coffee">("cold");
 
@@ -24,6 +26,15 @@ export function EmailTemplates({
         : coffeeChat.body;
     navigator.clipboard.writeText(text);
   };
+
+  const addBusy = addState === "saving" || addState === "added";
+  const addLabel =
+    addState === "saving"
+      ? "Adding..."
+      : addState === "added"
+      ? "Added!"
+      : "Add to Pipeline";
+  const AddIcon = addState === "added" ? Check : Plus;
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -85,10 +96,15 @@ export function EmailTemplates({
           </button>
           <button
             onClick={onAddToPipeline}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            disabled={addBusy}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-sm transition-colors disabled:opacity-70 ${
+              addState === "added"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
           >
-            <Plus size={14} weight="light" />
-            Add to Pipeline
+            <AddIcon size={14} weight="light" />
+            {addLabel}
           </button>
           <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             <PencilSimple size={14} weight="light" />

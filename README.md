@@ -9,7 +9,7 @@ AI-powered sales copilot that tracks leads end-to-end from discovery to close.
 - **Database:** Supabase (PostgreSQL + Auth)
 - **State:** Zustand
 - **Icons:** Phosphor Icons
-- **AI:** OpenAI API (for email generation)
+- **AI:** Google Gemini (for email generation and transcript analysis)
 
 ## Getting Started
 

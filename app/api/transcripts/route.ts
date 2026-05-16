@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
+import { generateWithGemini } from "@/lib/gemini";
 
 // GET /api/transcripts?lead_id=xxx
 export async function GET(req: NextRequest) {
@@ -36,20 +37,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient();
 
-  let summary: string | null = null;
-  let actionItems: string[] = [];
-  let keyDecisions: string[] = [];
-  let buyingSignals: string[] = [];
-  let objections: string[] = [];
-
-  if (raw_text && process.env.OPENAI_API_KEY) {
-    const aiSummary = await summarizeTranscript(raw_text);
-    summary = aiSummary.summary;
-    actionItems = aiSummary.action_items;
-    keyDecisions = aiSummary.key_decisions;
-    buyingSignals = aiSummary.buying_signals;
-    objections = aiSummary.objections;
-  }
+  const analysis = raw_text ? await analyzeTranscript(raw_text) : null;
 
   const { data, error } = await supabase
     .from("transcripts")
@@ -59,11 +47,12 @@ export async function POST(req: NextRequest) {
       title,
       source: source || "manual",
       raw_text: raw_text || null,
-      summary,
-      action_items: actionItems,
-      key_decisions: keyDecisions,
-      buying_signals: buyingSignals,
-      objections,
+      summary: analysis?.summary ?? null,
+      pain_points: analysis?.pain_points ?? [],
+      objections: analysis?.objections ?? [],
+      next_action: analysis?.next_action ?? null,
+      sentiment: analysis?.sentiment ?? null,
+      conversion_likelihood: analysis?.conversion_likelihood ?? null,
       meeting_date: meeting_date || new Date().toISOString(),
     })
     .select()
@@ -86,56 +75,63 @@ export async function POST(req: NextRequest) {
     .update({ last_activity: "Just now" })
     .eq("id", lead_id);
 
-  return NextResponse.json({ transcript: data }, { status: 201 });
+  return NextResponse.json({ transcript: data, analysis }, { status: 201 });
 }
 
-async function summarizeTranscript(text: string) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a sales meeting analyst. Extract structured insights from meeting transcripts. Return JSON with these fields:
-- summary: 2-3 sentence overview
-- action_items: array of follow-up tasks
-- key_decisions: array of decisions made
-- buying_signals: array of positive indicators (budget mentions, timeline urgency, stakeholder buy-in)
-- objections: array of concerns or pushback raised`,
-        },
-        {
-          role: "user",
-          content: `Analyze this sales meeting transcript:\n\n${text.slice(0, 8000)}`,
-        },
-      ],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-    }),
-  });
+interface TranscriptAnalysis {
+  summary: string;
+  pain_points: string[];
+  objections: string[];
+  sentiment: "positive" | "neutral" | "negative";
+  next_action: string;
+  conversion_likelihood: "hot" | "warm" | "cold";
+}
 
-  if (!response.ok) {
+async function analyzeTranscript(transcript: string): Promise<TranscriptAnalysis> {
+  if (!process.env.GEMINI_API_KEY) {
     return {
-      summary: null,
-      action_items: [],
-      key_decisions: [],
-      buying_signals: [],
-      objections: [],
+      summary: "Mock analysis - add GEMINI_API_KEY to enable real analysis",
+      pain_points: ["Needs better workflow", "Current tool too expensive"],
+      objections: ["Budget concerns", "Implementation time"],
+      sentiment: "positive",
+      next_action: "Send follow up within 24 hours",
+      conversion_likelihood: "warm",
     };
   }
 
-  const data = await response.json();
-  const parsed = JSON.parse(data.choices[0]?.message?.content || "{}");
+  const prompt = `You are an expert sales coach analyzing a sales call transcript.
 
-  return {
-    summary: parsed.summary || null,
-    action_items: parsed.action_items || [],
-    key_decisions: parsed.key_decisions || [],
-    buying_signals: parsed.buying_signals || [],
-    objections: parsed.objections || [],
+Transcript: ${transcript.slice(0, 8000)}
+
+Return JSON only, no markdown, no explanation:
+{
+  "summary": "<2-3 sentence summary>",
+  "pain_points": ["<point 1>", "<point 2>"],
+  "objections": ["<objection 1>", "<objection 2>"],
+  "sentiment": "<positive|neutral|negative>",
+  "next_action": "<specific next step>",
+  "conversion_likelihood": "<hot|warm|cold>"
+}`;
+
+  const parseFailureFallback: TranscriptAnalysis = {
+    summary: "Could not analyze transcript",
+    pain_points: [],
+    objections: [],
+    sentiment: "neutral",
+    next_action: "Manual review required",
+    conversion_likelihood: "warm",
   };
+
+  const text = await generateWithGemini(prompt, JSON.stringify(parseFailureFallback));
+
+  try {
+    const cleaned = text
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    return JSON.parse(cleaned) as TranscriptAnalysis;
+  } catch {
+    return parseFailureFallback;
+  }
 }

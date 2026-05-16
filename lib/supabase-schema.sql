@@ -74,9 +74,11 @@ create table public.transcripts (
   raw_text text,
   summary text,
   action_items text[] default '{}',
-  key_decisions text[] default '{}',
-  buying_signals text[] default '{}',
+  pain_points text[] default '{}',
   objections text[] default '{}',
+  next_action text,
+  sentiment text,
+  conversion_likelihood text,
   meeting_date timestamp with time zone,
   created_at timestamp with time zone default now()
 );

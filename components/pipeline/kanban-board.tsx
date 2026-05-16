@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DealStage } from "@/types";
 import { STAGES } from "@/lib/constants";
 import { usePipelineStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { LeadCard } from "./lead-card";
 
 export function KanbanBoard() {
@@ -27,10 +28,21 @@ export function KanbanBoard() {
   const handleDrop = (e: React.DragEvent, stageId: DealStage) => {
     e.preventDefault();
     setDragOverStage(null);
-    if (draggedId) {
-      updateLeadStage(draggedId, stageId);
-      setDraggedId(null);
-    }
+    if (!draggedId) return;
+
+    const id = draggedId;
+    const prevStage = usePipelineStore
+      .getState()
+      .leads.find((l) => l.id === id)?.stage;
+
+    updateLeadStage(id, stageId);
+    setDraggedId(null);
+
+    if (!prevStage || prevStage === stageId) return;
+
+    api.leads.updateStage(id, stageId).catch(() => {
+      updateLeadStage(id, prevStage);
+    });
   };
 
   const visibleStages = STAGES.filter((s) => s.id !== "closed_lost");

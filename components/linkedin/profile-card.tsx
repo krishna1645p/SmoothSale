@@ -7,13 +7,21 @@ interface ProfileCardProps {
   profile: ProfileAnalysis;
 }
 
+function getFitTier(score: number): {
+  label: "Hot" | "Warm" | "Cold";
+  classes: string;
+} {
+  if (score >= 8) {
+    return { label: "Hot", classes: "bg-emerald-50 text-emerald-800" };
+  }
+  if (score >= 5) {
+    return { label: "Warm", classes: "bg-amber-50 text-amber-800" };
+  }
+  return { label: "Cold", classes: "bg-red-50 text-red-800" };
+}
+
 export function ProfileCard({ profile }: ProfileCardProps) {
-  const fitColors = {
-    high: "bg-emerald-50 text-emerald-800",
-    medium: "bg-amber-50 text-amber-800",
-    low: "bg-red-50 text-red-800",
-  };
-  const fitLabels = { high: "High Fit", medium: "Medium Fit", low: "Low Fit" };
+  const tier = getFitTier(profile.fit_score);
 
   return (
     <div className="border border-gray-200 rounded-lg p-5">
@@ -33,11 +41,21 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           </div>
         </div>
         <span
-          className={`text-xs font-medium px-2.5 py-1 rounded-full ${fitColors[profile.fit_score]}`}
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${tier.classes}`}
         >
-          {fitLabels[profile.fit_score]}
+          {tier.label} · {profile.fit_score}/10
         </span>
       </div>
+
+      {profile.summary && (
+        <div className="mt-4">
+          <p className="text-xs text-gray-400 mb-1.5">Summary</p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {profile.summary}
+          </p>
+        </div>
+      )}
+
       <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="bg-gray-50 rounded-md p-3">
           <p className="text-xs text-gray-400">Industry</p>
@@ -58,6 +76,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           </p>
         </div>
       </div>
+
       <div className="mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-400 mb-1.5">Fit Analysis</p>
         <p className="text-sm text-gray-600">{profile.fit_reason}</p>

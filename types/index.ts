@@ -58,11 +58,12 @@ export interface ProfileAnalysis {
   name: string;
   title: string;
   company: string;
+  summary: string;
   location: string;
   industry: string;
   company_size: string;
   seniority: string;
-  fit_score: FitScore;
+  fit_score: number;
   fit_reason: string;
 }
 

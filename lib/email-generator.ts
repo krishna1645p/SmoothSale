@@ -1,4 +1,5 @@
 import { ProfileAnalysis, EmailTemplate, ICP } from "@/types";
+import { generateWithGemini } from "./gemini";
 
 interface GenerateEmailParams {
   profile: ProfileAnalysis;
@@ -11,107 +12,64 @@ interface GenerateEmailParams {
 export async function generateEmail(
   params: GenerateEmailParams
 ): Promise<EmailTemplate> {
-  const { profile, type, tone = "professional", senderName = "Chinmaya" } = params;
-  const apiKey = process.env.OPENAI_API_KEY;
+  const { profile } = params;
 
-  if (!apiKey) {
-    return generateFallbackEmail(params);
-  }
+  const prompt = buildPrompt(params);
+  const fallback = serializeTemplate(generateFallbackEmail(params));
 
-  const systemPrompt = `You are a sales email writer. Write highly personalized, concise emails that feel human — not templated. Never use generic openers like "I hope this email finds you well." Reference specific details about the prospect's role, company, and recent work.`;
-
-  const userPrompt = buildPrompt(params);
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    }),
-  });
-
-  if (!response.ok) {
-    console.error("OpenAI error:", response.status);
-    return generateFallbackEmail(params);
-  }
-
-  const data = await response.json();
-  const content: string = data.choices?.[0]?.message?.content || "";
-
-  const subjectMatch = content.match(/Subject:\s*(.+)/i);
-  const subject = subjectMatch?.[1]?.trim() || `Re: ${profile.company}`;
-  const body = content.replace(/Subject:\s*.+\n?/i, "").trim();
-
-  // Suppress unused-var lint for senderName/tone in fallback path
-  void senderName;
-  void tone;
-
-  return { subject, body };
+  const text = await generateWithGemini(prompt, fallback);
+  return parseEmailResponse(text, profile);
 }
 
 function buildPrompt(params: GenerateEmailParams): string {
-  const { profile, icp, type, tone, senderName } = params;
+  const { profile, icp, type, tone = "professional", senderName = "Chinmaya" } = params;
 
-  const baseContext = `
-Prospect: ${profile.name}
+  const emailType =
+    type === "cold_email"
+      ? "cold outreach"
+      : type === "coffee_chat"
+      ? "casual coffee chat"
+      : "follow-up";
+
+  const constraints =
+    type === "cold_email"
+      ? "Keep it under 120 words. Include one clear value prop and a soft CTA (15-min call, not aggressive)."
+      : type === "coffee_chat"
+      ? "Keep it under 100 words. Explicitly state 'no pitch'. Suggest coffee or a short virtual chat."
+      : "Keep it under 80 words. Add new value (a relevant insight or data point). End with a low-pressure CTA.";
+
+  return `You are an expert sales copywriter.
+Write a ${emailType} email to this person:
+Name: ${profile.name}
 Title: ${profile.title}
 Company: ${profile.company}
 Industry: ${profile.industry}
 Location: ${profile.location}
 Seniority: ${profile.seniority}
 
-My Product: ${icp.product_description}
-Sender: ${senderName}
+My product/service: ${icp.product_description}
+Sender name: ${senderName}
 Tone: ${tone}
-`;
 
-  if (type === "cold_email") {
-    return `${baseContext}
-Write a cold outreach email to this prospect. Include:
-- A subject line that references their company or role (not generic)
-- A personalized opening that shows you researched them
-- One clear value prop relevant to their role/company
-- A soft CTA (15-min call, not aggressive)
-- Keep it under 120 words
+${constraints}
 
-Format:
-Subject: [subject line]
-[email body]`;
-  }
+Reference specific details about their role and company so it feels human, not templated. Avoid generic openers like "I hope this email finds you well."
 
-  if (type === "coffee_chat") {
-    return `${baseContext}
-Write a casual coffee chat / networking request. Include:
-- A genuine compliment about their work or company
-- A reason you're reaching out (curiosity, shared interest)
-- Explicitly state "no pitch"
-- Suggest coffee or a short virtual chat
-- Keep it under 100 words
+Format your response exactly as:
+Subject: <subject line>
+<email body>`;
+}
 
-Format:
-Subject: [subject line]
-[message body]`;
-  }
+function parseEmailResponse(text: string, profile: ProfileAnalysis): EmailTemplate {
+  const cleaned = text.trim();
+  const subjectMatch = cleaned.match(/Subject:\s*(.+)/i);
+  const subject = subjectMatch?.[1]?.trim() || `Re: ${profile.company}`;
+  const body = cleaned.replace(/Subject:\s*.+\n?/i, "").trim();
+  return { subject, body };
+}
 
-  return `${baseContext}
-Write a follow-up email after no response to the initial outreach. Include:
-- A brief callback to the original message
-- Add new value (a relevant insight, article, or data point)
-- Keep it under 80 words
-- End with a low-pressure CTA
-
-Format:
-Subject: [subject line]
-[email body]`;
+function serializeTemplate(t: EmailTemplate): string {
+  return `Subject: ${t.subject ?? ""}\n${t.body}`;
 }
 
 function generateFallbackEmail(params: GenerateEmailParams): EmailTemplate {

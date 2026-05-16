@@ -1,53 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "@phosphor-icons/react";
+import Link from "next/link";
+import { Plus, CircleNotch, Sparkle } from "@phosphor-icons/react";
 import { KanbanBoard } from "@/components/pipeline/kanban-board";
 import { AddLeadModal } from "@/components/pipeline/add-lead-modal";
 import { usePipelineStore } from "@/lib/store";
-import { Lead } from "@/types";
-
-const SAMPLE_LEADS: Lead[] = [
-  {
-    id: "1", name: "Sarah Chen", company: "ScaleAI", title: "VP Engineering",
-    stage: "meeting", fit_score: "high", outreach_mode: "email", last_activity: "2 hours ago",
-    created_at: "2026-05-10", updated_at: "2026-05-16", user_id: "1",
-  },
-  {
-    id: "2", name: "Marcus Johnson", company: "Stripe", title: "Eng Director",
-    stage: "outreach", fit_score: "high", outreach_mode: "linkedin_message", last_activity: "1 day ago",
-    created_at: "2026-05-12", updated_at: "2026-05-15", user_id: "1",
-  },
-  {
-    id: "3", name: "Priya Patel", company: "Notion", title: "Head of Platform",
-    stage: "lead", fit_score: "medium", outreach_mode: null, last_activity: "3 days ago",
-    created_at: "2026-05-08", updated_at: "2026-05-13", user_id: "1",
-  },
-  {
-    id: "4", name: "Alex Rivera", company: "Vercel", title: "CTO",
-    stage: "proposal", fit_score: "high", outreach_mode: "email", last_activity: "5 hours ago",
-    created_at: "2026-05-05", updated_at: "2026-05-16", user_id: "1",
-  },
-  {
-    id: "5", name: "Jordan Lee", company: "Retool", title: "VP Product",
-    stage: "lead", fit_score: "medium", outreach_mode: null, last_activity: "1 day ago",
-    created_at: "2026-05-14", updated_at: "2026-05-15", user_id: "1",
-  },
-  {
-    id: "6", name: "Emily Zhang", company: "Datadog", title: "Eng Director",
-    stage: "closed_won", fit_score: "high", outreach_mode: "phone", last_activity: "1 week ago",
-    created_at: "2026-04-20", updated_at: "2026-05-09", user_id: "1",
-  },
-];
+import { api } from "@/lib/api";
 
 export default function PipelinePage() {
   const { leads, setLeads } = usePipelineStore();
   const [modalOpen, setModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (leads.length === 0) {
-      setLeads(SAMPLE_LEADS);
-    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api.leads
+      .list()
+      .then((rows) => {
+        if (cancelled) return;
+        setLeads(rows ?? []);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "Failed to load leads");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -57,7 +43,7 @@ export default function PipelinePage() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Pipeline</h2>
           <p className="text-sm text-gray-400 mt-0.5">
-            {leads.length} leads across your pipeline
+            {loading ? "Loading..." : `${leads.length} leads across your pipeline`}
           </p>
         </div>
         <button
@@ -68,7 +54,38 @@ export default function PipelinePage() {
           Add Lead
         </button>
       </div>
-      <KanbanBoard />
+
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+          <CircleNotch size={28} weight="light" className="animate-spin mb-3" />
+          <p className="text-sm">Loading leads...</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="border border-red-200 bg-red-50 text-red-700 text-sm rounded-md p-4">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && leads.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <Sparkle size={28} weight="light" className="text-gray-300 mb-3" />
+          <p className="text-sm text-gray-500 mb-1">No leads yet.</p>
+          <p className="text-sm text-gray-400 mb-4">
+            Go to Lead Intel to add your first lead.
+          </p>
+          <Link
+            href="/lead-intel"
+            className="px-3.5 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
+          >
+            Go to Lead Intel
+          </Link>
+        </div>
+      )}
+
+      {!loading && !error && leads.length > 0 && <KanbanBoard />}
+
       <AddLeadModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );

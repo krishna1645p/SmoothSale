@@ -1,4 +1,4 @@
-import { ProfileAnalysis, FitScore, ICP } from "@/types";
+import { ProfileAnalysis, ICP } from "@/types";
 
 interface ProxycurlProfile {
   full_name: string;
@@ -45,11 +45,11 @@ export async function fetchLinkedInProfile(
   return response.json();
 }
 
-// Score a profile against user's ICP
+// Score a profile against user's ICP — returns a 1-10 fit score
 export function scoreProfileFit(
   profile: ProxycurlProfile,
   icp: ICP
-): { score: FitScore; reason: string } {
+): { score: number; reason: string } {
   let points = 0;
   const reasons: string[] = [];
 
@@ -89,14 +89,19 @@ export function scoreProfileFit(
     reasons.push(`keyword signals: ${keywordMatches.join(", ")}`);
   }
 
-  let score: FitScore;
-  if (points >= 6) score = "high";
-  else if (points >= 3) score = "medium";
-  else score = "low";
+  // Clamp to 1-10
+  const score = Math.min(10, Math.max(1, points));
 
+  const tier = score >= 8 ? "Hot" : score >= 5 ? "Warm" : "Cold";
   const reasonText =
     reasons.length > 0
-      ? `Matches ICP on ${reasons.join(", ")}. ${score === "high" ? "High likelihood of budget authority." : score === "medium" ? "Worth exploring further." : "Limited alignment with target profile."}`
+      ? `Matches ICP on ${reasons.join(", ")}. ${
+          tier === "Hot"
+            ? "High likelihood of budget authority."
+            : tier === "Warm"
+            ? "Worth exploring further."
+            : "Limited alignment with target profile."
+        }`
       : "No strong signals matching your ICP criteria.";
 
   return { score, reason: reasonText };
@@ -104,7 +109,7 @@ export function scoreProfileFit(
 
 export function parseProfile(
   profile: ProxycurlProfile,
-  fitResult: { score: FitScore; reason: string }
+  fitResult: { score: number; reason: string }
 ): ProfileAnalysis {
   const currentExperience = profile.experiences?.[0];
   const location = [profile.city, profile.state, profile.country_full_name]
@@ -117,6 +122,7 @@ export function parseProfile(
     name: profile.full_name,
     title: currentExperience?.title || profile.headline,
     company: currentExperience?.company || "Unknown",
+    summary: profile.summary || profile.headline || "",
     location: location || "Unknown",
     industry: profile.industry || "Unknown",
     company_size: inferCompanySize(profile.connections),
