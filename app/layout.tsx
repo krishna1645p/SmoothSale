@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
+import { Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/ui/sidebar";
+import { LayoutShell } from "@/components/ui/layout-shell";
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-sora",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "SmoothSale",
@@ -13,10 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-white min-h-screen">
-        <Sidebar />
-        <main className="ml-[220px] min-h-screen">{children}</main>
+    <html lang="en" className={`${sora.variable} ${dmSans.variable}`}>
+      <body className="bg-white min-h-screen font-sans">
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

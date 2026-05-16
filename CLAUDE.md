@@ -6,10 +6,27 @@ Project guidance for Claude Code when working in this repository.
 
 AI-powered sales copilot. Next.js 14 App Router + Tailwind + Supabase + Zustand + Gemini.
 
+## Routing
+
+- **`/` — Public landing page.** Marketing site at [app/page.tsx](app/page.tsx). No sidebar, no auth, no API calls. Anyone can view it. Both CTAs link into `/pipeline`.
+- **`/pipeline`, `/lead-intel`, `/analytics`, `/add-product` — App routes.** Sidebar shell + Zustand + API wiring. This is where any future auth protection should start.
+- **Layout switching**: [components/ui/layout-shell.tsx](components/ui/layout-shell.tsx) is a client component that reads `usePathname()`. It renders bare `<main>` for `/` and renders `<Sidebar />` + offset main for everything else. Mounted from [app/layout.tsx](app/layout.tsx).
+- **No middleware.ts yet.** When auth lands, add `middleware.ts` at the project root and use a matcher like `['/pipeline/:path*', '/lead-intel/:path*', '/analytics/:path*', '/add-product/:path*']` so `/` stays public.
+
+## Fonts
+
+- **Sora** — headings, brand name, stat values. Loaded via `next/font/google` in [app/layout.tsx](app/layout.tsx) as `--font-sora`. Use the `font-sora` Tailwind utility.
+- **DM Sans** — body and UI text. Loaded as `--font-dm-sans`, wired as the default `font-sans` in [tailwind.config.ts](tailwind.config.ts), so it applies to the whole tree without explicit classes.
+
+## Colors
+
+`navy` palette (50, 100, 200, 400, 600, 800, 900) is defined in [tailwind.config.ts](tailwind.config.ts) under `theme.extend.colors`. Use `bg-navy-900`, `text-navy-600`, `border-navy-100`, opacity modifiers like `bg-navy-400/20`, etc.
+
 ## Connection Status
 
 | Page / Component | Status | Wired through |
 |---|---|---|
+| `/` (landing) | **Static** — public marketing page, no auth, no API |
 | `/pipeline` (page + KanbanBoard) | **Connected** | `api.leads.list()` on mount; `api.leads.updateStage()` on drag-drop with optimistic update + revert on failure |
 | `/lead-intel` | **Connected** | `api.analyze(url)` for profile + emails; `api.leads.create()` for Add to Pipeline (then redirects to `/pipeline` after 1s) |
 | `/add-product` | **Connected** | `api.icp.get()` on mount (prefills form); `api.icp.upsert()` on save |

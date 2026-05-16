@@ -8,7 +8,19 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        sora: ["var(--font-sora)", "system-ui", "sans-serif"],
+      },
+      colors: {
+        navy: {
+          900: "#042C53",
+          800: "#0C447C",
+          600: "#185FA5",
+          400: "#378ADD",
+          200: "#85B7EB",
+          100: "#B5D4F4",
+          50: "#E6F1FB",
+        },
       },
       keyframes: {
         slideIn: {
